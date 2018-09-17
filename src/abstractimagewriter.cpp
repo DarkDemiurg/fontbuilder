@@ -37,7 +37,7 @@
 #include <QTimer>
 #include <QDebug>
 #include <QPaintEngine>
-
+#include <QBuffer>
 
 AbstractImageWriter::AbstractImageWriter(QObject *parent ) : QObject(parent),m_watcher(0) {
     setExtension("img");
@@ -83,9 +83,58 @@ QImage AbstractImageWriter::buildImage() {
                               c.y + layoutConfig()->offsetTop(),rend.img);
         }
     */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     b
+    // TODO: [Demiurg]
+    bool opened = false;
+    QFile file(this);
+    file.setFileName("font.c");
+
+    QTextStream stream(&file);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        // всё плохо
+    }
+    else{
+    //    rend.img.save(&file, QString("png").toUtf8().data());
+        opened = true;
+    }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      e
     foreach (const LayoutChar& c,layout()->placed())
             if (rendered()->chars.contains(c.symbol)) {
                 const RenderedChar& rend = rendered()->chars[c.symbol];
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      b
+
+                quint8 offset = 0,
+                       width = static_cast<quint8>(rend.img.width()),
+                       heigth = static_cast<quint8>(rend.img.height());
+
+                QStringList symbol(QString("\n\n\n"
+                                           "///////////////////////////////////////////\n"
+                                           "// character %1 [%2]\n"
+                                           "// offset = %3 width = %4 heigth = %5\n"
+                                           "// ascender = %6 descender = %7 advance = %8\n"
+                                           "// base = %9").arg(QChar(rend.symbol)).arg(QString::number(rend.symbol)).arg(offset).arg(width).arg(heigth).arg(rend.offsetX).arg(rend.offsetY).arg(rend.advance).arg(rendered()->metrics.ascender));
+                for(int i=0; i < rend.img.height(); i++)
+                {
+                    QStringList row;
+                    for(int j=0; j < rend.img.width(); j++)
+                    {
+                        QRgb pix = rend.img.pixel(j, i);
+                        //int gray = qGray(pix);
+                        int alpha = qAlpha(pix);
+                        row << QString("%1").arg(alpha, 2, 16, QChar(' '));
+                        //row << QString("%1").arg(gray, 3, 16, QChar(' '));
+                    }
+                    symbol << row.join(",");
+                }
+
+                //qDebug() << symbol.join("\n");
+                if (opened)
+                {
+                    stream << symbol.join("\n");
+                }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////      e
                 int x = c.x + layoutConfig()->offsetLeft();
                 int y = c.y + layoutConfig()->offsetTop();
                 placeImage(pixmap,x,y,rend.img);
